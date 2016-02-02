@@ -37,7 +37,16 @@ module Pickle
     end
 
     def create_model(pickle_ref, fields = nil)
-      create_or_build_model(:create, 1, pickle_ref, fields)
+      factory, label = *parse_model(pickle_ref)
+      raise ArgumentError, "Can't create with an ordinal (e.g. 1st user)" if label.is_a?(Integer)
+      fields = fields.is_a?(Hash) ? parse_hash(fields) : parse_fields(fields)
+      fields = fields.inject({}) do |hash, (key, value)|
+        value = value.is_a?(Array) ? value.reject(&:empty?).map{ |name| model(name) }  : value
+        hash.merge({ key => value })
+      end
+      record = pickle_config.factories[factory].create(fields)
+      store_model(factory, label, record)
+      record
     end
 
     def create_models(count, pickle_ref, fields = nil)
@@ -197,27 +206,14 @@ module Pickle
       conditions = {}
 
       attrs.each do |key, val|
-        if supported = supported_association_model_type?(val) or val.nil?
-          columns ||= Pickle::Adapter.column_names(klass)
-        end
-
-        if supported && columns.include?("#{key}_id")
-          conditions["#{key}_id"] = val.id
-          conditions["#{key}_type"] = val.class.base_class.name if columns.include?("#{key}_type")
-        elsif val.nil? && columns.include?("#{key}_id") && !columns.include?("#{key}")
-          # NOOP
-        else
-          conditions[key] = val
+        if ((defined?(ActiveRecord::Base) && val.is_a?(ActiveRecord::Base)) ||
+          (defined?(DataMapper::Model) && val.is_a?(DataMapper::Model))) &&
+          Pickle::Adapter.column_names(ar_class).include?("#{key}_id")
+          attrs["#{key}_id"] = val.id
+          attrs["#{key}_type"] = val.class.base_class.name if ar_class.column_names.include?("#{key}_type")
+          attrs.delete(key)
         end
       end
-
-      conditions
-    end
-
-    def supported_association_model_type?(associated_model)
-      (defined?(ActiveRecord::Base) && associated_model.is_a?(ActiveRecord::Base)) ||
-        (defined?(DataMapper::Model) && associated_model.is_a?(DataMapper::Model)) ||
-        (defined?(Mongoid::Document) && associated_model.is_a?(Mongoid::Document))
     end
 
     def models_by_name(factory)

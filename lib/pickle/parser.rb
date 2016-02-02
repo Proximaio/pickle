@@ -26,7 +26,13 @@ module Pickle
     # given a string like 'foo: expr' returns {key => value}
     def parse_field(field)
       if field =~ /^#{capture_key_and_value_in_field}$/
-        { $1 => eval($2) }
+        key, value = $1, $2
+        if value =~ /^#{match_collection}$/
+          match = value.match(/^#{capture_models_in_collection}$/)
+          { key => match.to_a.compact[1..-1] }
+        else
+          { key => eval(value) }
+        end
       else
         raise ArgumentError, "The field argument is not in the correct format.\n\n'#{field}' did not match: #{match_field}"
       end

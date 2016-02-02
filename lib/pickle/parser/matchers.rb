@@ -14,7 +14,11 @@ module Pickle
       end
 
       def match_quoted
-        '(?:\\\\"|[^\\"]|\\.)*'
+        '(?:[^\\"]|\\.)*'
+      end
+
+      def match_collection
+        "(?:\\[(?:#{match_model}, )*#{match_model}\\])"
       end
 
       def match_label
@@ -22,7 +26,7 @@ module Pickle
       end
 
       def match_value
-        "(?:\"#{match_quoted}\"|nil|true|false|[+-]?[0-9_]+(?:\\.\\d+)?)"
+        "(?:\"#{match_quoted}\"|#{match_collection}|nil|true|false|[+-]?[0-9_]+(?:\\.\\d+)?)"
       end
 
       def match_field
@@ -81,6 +85,10 @@ module Pickle
 
       def capture_key_and_value_in_field
         "(?:(\\w+): #{capture_value})"
+      end
+
+      def capture_models_in_collection
+        "(?:\\[(?:(#{match_model}), )*(#{match_model})\\])"
       end
     end
   end

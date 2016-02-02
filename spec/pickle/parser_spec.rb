@@ -34,7 +34,11 @@ describe Pickle::Parser do
       it "should return {'a' => 'b'} for 'a: \"b\"'" do
         expect(@parser.parse_field('a: "b"')).to eq({'a' => 'b'})
       end
-  
+
+      it "should return {'a' => ['that user', 'user \"Bob\"']} for 'a: [that user, user \"Bob\"]'" do
+        @parser.parse_field('a: [that user, user "Bob"]').should == {'a' => ['that user', 'user "Bob"']}
+      end
+
       it "should raise error for invalid field 'a : b'" do
         expect { @parser.parse_field('a : b') }.to raise_error(ArgumentError)
       end
@@ -74,8 +78,8 @@ describe Pickle::Parser do
         expect(@parser.parse_fields('float: 10.1')).to eq({"float" => 10.1})
       end
 
-      it '(\'foo: "bar", bar_man: "wonga wonga", baz_woman: "one \"two\" three", gump: 123\') should == {"foo" => "bar", "bar_man" => "wonga wonga", "gump" => 123}' do
-        expect(@parser.parse_fields('foo: "bar", bar_man: "wonga wonga", baz_woman: "one \"two\" three", gump: 123')).to eq({"foo" => "bar", "bar_man" => "wonga wonga", "baz_woman" => "one \"two\" three", "gump" => 123})
+      it '(\'foo: "bar", bar_man: "wonga wonga", gump: 123, many: [that user]\') should == {"foo" => "bar", "bar_man" => "wonga wonga", "gump" => 123, "many" => ["that user"]}' do
+        @parser.parse_fields('foo: "bar", bar_man: "wonga wonga", gump: 123, many: [that user]').should == {"foo" => "bar", "bar_man" => "wonga wonga", "gump" => 123, "many" => ["that user"]}
       end
     end
   
